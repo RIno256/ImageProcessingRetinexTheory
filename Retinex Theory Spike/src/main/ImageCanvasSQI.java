@@ -12,7 +12,10 @@ import javax.swing.filechooser.FileFilter;
 
 public class ImageCanvasSQI extends JPanel implements ActionListener {
 
-
+	
+		//A test commit.
+	
+	
 		private static BufferedImage inputImage; //image object of input image
 		//private static BufferedImage smoothColorImage; //grey image of input image
 		public File selectedFile = new File("");
