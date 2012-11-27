@@ -15,20 +15,17 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	
 		//A test commit.
 	
-	
-		private static BufferedImage inputImage; //image object of input image
+		private MyRetinexSQI retinexSQI;
+		private static BufferedImage loadedImage; //image object of input image
 		//private static BufferedImage smoothColorImage; //grey image of input image
-		public File selectedFile = new File("");
-		  // for loading images for registration
-		public FileFilter[] filtersDynamic = new FileFilter[] {new TextFilter()};
+		private JFileChooser chooser;//for loading image using a file chooser.
+		private String imageName;
 		
 		
-		public ImageCanvasSQI(){
+		public ImageCanvasSQI(MyRetinexSQI retinexSQI){
 			setBackground(Color.white);
-			
-			BufferedImage sourceImage = null;
-	        JFileChooser fc = new JFileChooser();
-	        JFileChooser fe = new JFileChooser();
+			this.retinexSQI = retinexSQI;
+			//BufferedImage sourceImage = null;
 	        
 			
 		}
@@ -42,10 +39,36 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	          }
 
 	        if (event.getActionCommand().equalsIgnoreCase("load image")){
-	             //display=1;
-	             //LoadImage();
+	             LoadImage();
 	          }
 
+			
+		}
+		
+		
+		public void LoadImage(){
+			File dir = new File(".");
+			FileFilter filt = new PictureFilter();
+			
+			chooser = new JFileChooser();
+			chooser.setCurrentDirectory(dir);//Start at in set directory.
+			chooser.setDialogTitle("Image Selecter");//Set title for the file chooser.
+			chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);//Only choose files.
+			//chooser.setAcceptAllFileFilterUsed(false);// Disallow all files to be shown.
+			
+			
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION){
+				dir = chooser.getSelectedFile();
+				System.out.println("File Selected! " + dir);
+				imageName = dir.getPath();//Get's the directory of the file as a string.
+				
+				loadedImage = MyImageUtilities.getBufferedImage(imageName, retinexSQI);
+				
+			}
+			else{
+				System.out.println("Nothing Selected!");
+			}
+			
 			
 		}
 	
