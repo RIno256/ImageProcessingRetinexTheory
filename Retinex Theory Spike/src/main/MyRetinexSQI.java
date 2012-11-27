@@ -1,10 +1,6 @@
 package main;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.File;
 
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -13,18 +9,23 @@ import javax.swing.JSeparator;
 
 public class MyRetinexSQI extends JFrame {
 
+		/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3043654662483158071L;
 		private JMenuItem LoadImage, Exit, About, SaveImage;
-		private BufferedImage myImage;
+//		private BufferedImage sourceImage;
+		private ImageCanvasSQI canvas;
 		
 	
 		public MyRetinexSQI(){
 			super("My Retinex Example");
-
+			
 			
 		    JMenuBar menuBar = new JMenuBar();
             setJMenuBar(menuBar);
 			
-			ImageCanvasSQI canvas = new ImageCanvasSQI(this);
+			canvas = new ImageCanvasSQI(this);
 			this.setContentPane(canvas);
 			
 	    	JMenu fileMenu = new JMenu("File");
@@ -34,24 +35,41 @@ public class MyRetinexSQI extends JFrame {
 	        LoadImage = new JMenuItem("Load Image");
 	    	LoadImage.addActionListener(canvas);
 	        
+	    	SaveImage = new JMenuItem("Save Image");
+	    	SaveImage.addActionListener(canvas);
+	    	
 	        Exit = new JMenuItem("Exit");
 	        Exit.addActionListener(canvas);
 	         
 		    fileMenu.add(LoadImage);
+		    fileMenu.add(SaveImage);
 		    fileMenu.add(new JSeparator());
 	    	fileMenu.add(Exit);
 	    	
 		    menuBar.add(fileMenu);
             menuBar.add(imageProcessingMenu);
             menuBar.add(otherMenu);
+            
 	        
 		}
 
-	
-	
-	
+	//	public void LoadImage(BufferedImage sourceImage){
+			
+		//	this.sourceImage = sourceImage;
+			//int width = sourceImage.getWidth();
+			//int height = sourceImage.getHeight();
+			//BufferedImage drawn = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			
+			//Graphics graphics = drawn.getGraphics();
+			//Graphics graphics = canvas.getGraphics();
+			//graphics.drawImage(sourceImage, 0, 0, canvas);
+			
+		//}
+		
+
+
+				
 		public static void main(String[] args){
-			@SuppressWarnings("unused")
 			MyRetinexSQI run = new MyRetinexSQI();
 			run.setDefaultCloseOperation(EXIT_ON_CLOSE);
 			run.setSize(800, 600);
