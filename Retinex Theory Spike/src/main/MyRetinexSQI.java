@@ -21,6 +21,7 @@ public class MyRetinexSQI extends JFrame {
 		public MyRetinexSQI(){
 			super("My Retinex Example");
 			
+			//JPanel myPanel = new JPanel();
 			
 		    JMenuBar menuBar = new JMenuBar();
             setJMenuBar(menuBar);

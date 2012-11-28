@@ -49,13 +49,17 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 			
 		}
 		
-		
+		/**
+		 * Creates a FileChooser.
+		 * Creates a picturesFilter which extends FileFilter.
+		 * File Filter added to the FileChooser
+		 */
 		public void LoadImage(){
 			String imageName;
 			
 			File dir = new File(".");
 			chooser = new JFileChooser(dir);
-			FileFilter filter = new PictureFilter(descriptionJFileChooser ,extensionsAllowedJFileChooser);//Create the file filter with parameters String, String[].
+			PictureFilter filter = new PictureFilter(descriptionJFileChooser ,extensionsAllowedJFileChooser);//Create the file filter with parameters String, String[].
 			
 			
 			chooser.setFileFilter(filter);//Set the filter to the FileChooser
@@ -69,7 +73,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 				System.out.println("File Selected! " + dir);
 				imageName = dir.getPath();//Get's the directory of the file as a string.
 				
-				loadedImage = MyImageUtilities.getBufferedImage(imageName, this);
+				loadedImage = MyImageUtilities.getBufferedImage(imageName, retinexSQI);
 			}
 			else{
 				System.out.println("Nothing Selected!");
@@ -83,6 +87,12 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
            ImageIO.write(processedImage,"jpeg",savedFile);
            System.out.println("Image Saved!");
            } catch (Exception e) {}
+		}
+		
+		public void Unpack(){//Unpacks the image.
+			
+			
+			
 		}
 		
 		public void paint(Graphics g) {//Draws the image on the screen.
