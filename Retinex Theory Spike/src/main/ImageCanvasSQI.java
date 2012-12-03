@@ -26,9 +26,9 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
     	private int totalCols = 0;
     	private int[] bufferedImageData;
     	
-    	private short[][] bufferedImageRed = null;
-    	private short[][] bufferedImageGreen = null;
-    	private short[][] bufferedImageBlue = null;
+    	private short[][] bufferedImageRed;
+    	private short[][] bufferedImageGreen;
+    	private short[][] bufferedImageBlue;
 		
 		private BufferedImage loadedImage, processedImage; //image object of input image
 		
@@ -53,6 +53,10 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        
 	        if (event.getActionCommand().equalsIgnoreCase("save image")){
 	        	SaveImage();
+	        }
+	        if (event.getActionCommand().equalsIgnoreCase("process image")){
+	        	processedImage = MSRCR(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, totalRows, totalCols);
+	        	
 	        }
 	    
 			
@@ -91,7 +95,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		}
 	
 		public void SaveImage(){
-			processedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
+			//processedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
             File savedFile=new File("test.jpg");
             try {
             ImageIO.write(processedImage,"jpeg",savedFile);
@@ -135,8 +139,6 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    }
 	    
 	    public void unpackImage(BufferedImage bufferedImage) {
-	        // check if we need to resize the component arrays, i.e.,
-	        // has the size of the image changed?
 
 			
 			if (bufferedImage.getHeight() != totalRows || bufferedImage.getWidth() != totalCols) {
@@ -148,12 +150,10 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	            bufferedImageBlue  = new short[totalRows][totalCols];
 	        }
 
-	        // get pixels as ints of the form 0xRRGGBB
 	        bufferedImageData = bufferedImage.getRGB(0, 0, bufferedImage.getWidth(),
 	                                           bufferedImage.getHeight(), null, 0,
 	                                           bufferedImage.getWidth());
 
-	        // extract red, green, and blue components from each pixel
 	        int index;
 	        for (int currentRow = 0; currentRow < totalRows; currentRow++) {
 	            for (int currentCol = 0; currentCol < totalCols; currentCol++) {
@@ -189,7 +189,93 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 
 	    	return newImage;
 	    }
-		
-		
-	
+	    
+	    /**
+	     * Retinex Algorithm.
+	     * MultiScale Retinex with Colour Restoration(MSRCR).
+	     * Takes in the image's red, green, blue information for each pixel as 3 short[][].
+	     * Takes in image rows for height and cols for width as ints.
+	     */
+	    public BufferedImage MSRCR(short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][]
+	    						  bufferedImageBlue,int imageRows,int imageCols){
+
+	    	BufferedImage finishedImage;
+	    	//int linearImageArraySize = imageRows * imageCols * 3;//3 for RGB.
+	    	int linearChannelArraySize = imageRows * imageCols;
+	    	int channel;
+	    	
+	    	//float[] imageRGB= new float[linearImageArraySize];
+	    	//float[] out = new float[linearChannelArraySize];
+	    	float[][] imageChannels = new float[3][linearChannelArraySize];//3 for RGB.
+	    	short[][] currentChannel = new short[imageRows][imageCols];//Used to store current channel information.
+	    		    	
+		    for(channel = 0;channel < 3; channel++){//For each red, green, blue.-----------------------------Linearise.
+		    	switch(channel){//Sets the current colour channel.
+		    	case 0: currentChannel = bufferedImageRed;	
+		    	case 1: currentChannel = bufferedImageGreen;
+		    	case 2: currentChannel = bufferedImageBlue;
+		    	}
+		    	for(int i = 0; i < imageRows; i++){//For each width.
+		    		for(int j=0; j < imageCols; j++){//For each height.
+		    			imageChannels[channel][i+j] = (float)currentChannel[i][j];//Change short to float.
+		    		}		    		
+		    	}
+		    	
+		    	
+		    	
+		    	//ImageRGB assigned.
+		    }
+	    	imageChannels = GaussianBlur(imageChannels,imageRows,imageCols);//GaussianBlur.
+	    	
+	    	for(int i = 0; i < imageRows; i++){//For each width.//For each red, green, blue.-----------------------------De-linearise.
+	    		for(int j=0; j < imageCols; j++){//For each height.
+	    			bufferedImageRed[i][j]= (short)imageChannels[0][i+j];//Change short to float.
+	    			bufferedImageGreen[i][j]= (short)imageChannels[1][i+j];;
+	    			bufferedImageBlue[i][j]= (short)imageChannels[2][i+j];;
+	    		}		    		
+	    	}
+	    	finishedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
+	    	return finishedImage;
+	    }
+	    
+	    /**
+	     * Gaussian Blur
+	     * 
+	     * @param imageChannels
+	     * @param imageRows
+	     * @param imageCols
+	     * @return
+	     */
+	    public float[][] GaussianBlur(float[][] imageChannels, int imageRows, int imageCols){
+	    	int size = 3;
+	    	double [] kernel = new double[size*size];
+	    	double total, tot;
+	    	float [][] smoothImage = new float[3][imageRows+imageCols];
+	    	
+	    	for(int i=0;i<size;i++)
+	    		for(int j=0;j<size;j++)
+	    			kernel[i+j]=Math.exp(-((i-(size/2))*(i-(size/2))+(j-(size/2))*(j-(size/2)))/(2*1f*1f));
+	    	for(int channel=0; channel<3;channel++)
+		    	for(int rows=0;rows < imageRows;rows++)
+		    		for(int cols=0;cols < imageCols;cols++)
+		    			smoothImage[channel][rows + cols] = imageChannels[channel][rows + cols];
+
+	    	for(int row=0; row < imageRows; row++){
+	    	      for(int col=0; col < imageCols; col++) {
+	    	      total=tot=0f;
+		    	for(int channel=0; channel<3;channel++){     
+		    	      for(int i=0; i<size; i++)
+		    	    	  for(int j=0; j<size; j++)
+		    	    		  if((row-size/2+i)>=0 && (row-size/2+i)<imageRows && (col-size/2+j)>=0 && (col-size/2+j)<imageCols) {   
+		    	    			  total += kernel[i+j] * imageChannels[channel][(col-size/2+j)+(row-size/2+i)];
+		    	    			  tot += kernel[i+j];
+		    	    		  }
+		    	      smoothImage[channel][row+col]=(float) (total/tot);
+		    	      }
+		    	}
+	    	}
+	    	return imageChannels;
+	    }	
+
+
 }

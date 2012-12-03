@@ -13,7 +13,7 @@ public class MyRetinexSQI extends JFrame {
 	 * 
 	 */
 	private static final long serialVersionUID = -3043654662483158071L;
-		private JMenuItem LoadImage, Exit, About, SaveImage;
+		private JMenuItem LoadImage, Exit, About, SaveImage, processImage;
 //		private BufferedImage sourceImage;
 		private ImageCanvasSQI canvas;
 		
@@ -41,11 +41,16 @@ public class MyRetinexSQI extends JFrame {
 	    	
 	        Exit = new JMenuItem("Exit");
 	        Exit.addActionListener(canvas);
-	         
+	        
+	        processImage = new JMenuItem("Process Image");
+	        processImage.addActionListener(canvas);
+	        
 		    fileMenu.add(LoadImage);
 		    fileMenu.add(SaveImage);
 		    fileMenu.add(new JSeparator());
 	    	fileMenu.add(Exit);
+	    	
+	    	imageProcessingMenu.add(processImage);
 	    	
 		    menuBar.add(fileMenu);
             menuBar.add(imageProcessingMenu);
