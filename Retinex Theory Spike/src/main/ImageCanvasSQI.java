@@ -59,9 +59,9 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        	SaveImage();
 	        }
 	        if (event.getActionCommand().equalsIgnoreCase("process image")){
-	        	processedImage = gaussianBlur(loadedImage);
-	        	unpackImage(processedImage);
-	        	processedImage = MSRCR(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, totalRows, totalCols);
+	        	//processedImage = gaussianBlur(loadedImage);
+	        	//unpackImage(processedImage);
+	        	processedImage = MSRCR(totalRows, totalCols);
 	        	
 	        }
 	    
@@ -198,6 +198,45 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    	return newImage;
 	    }
 	    
+	    public void reflectance(short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][]
+	    						bufferedImageBlue,int imageRows,int imageCols){
+	    
+	    	float[][] refRed = new float[imageRows][imageCols],
+	    			  refGreen = new float[imageRows][imageCols], 
+	    			  refBlue= new float[imageRows][imageCols];
+	    	float red, green, blue;
+	    	float redMax = 0, greenMax = 0, blueMax = 0;
+	    	
+	    	for(int i=0;i<imageRows;i++)
+	    		for(int j=0; j<imageCols;j++){
+	    			red = bufferedImageRed[i][j];
+	    			green = bufferedImageGreen[i][j];
+	    			blue = bufferedImageBlue[i][j];
+	    			
+	    			if(redMax < red){redMax = red;}
+	    			if(greenMax < green){greenMax = green;}
+	    			if(blueMax < blue){blueMax = blue;}
+	    		}
+	    	for(int i = 0;i<imageRows;i++)
+	    		for(int j = 0;j<imageCols;j++){
+	    				    			
+	    			red = bufferedImageRed[i][j];
+	    			green = bufferedImageGreen[i][j];
+	    			blue = bufferedImageBlue[i][j];
+	    			
+	    			this.bufferedImageRed[i][j] = (short) ((red/redMax)*155);
+	    			this.bufferedImageGreen[i][j] = (short) ((green/greenMax)*155);
+	    			this.bufferedImageBlue[i][j] = (short) ((blue / blueMax)*155);
+	    			
+	    		}
+	    	
+	    	
+	    	
+	    	
+	    	
+	    	
+	    }
+	    
 	    
 	    public float[][] linearise (short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][] 
 	    						bufferedImageBlue,int imageRows,int imageCols){
@@ -230,26 +269,20 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	     * Takes in the image's red, green, blue information for each pixel as 3 short[][].
 	     * Takes in image rows for height and cols for width as ints.
 	     */
-	    public BufferedImage MSRCR(short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][]
-	    						  bufferedImageBlue,int imageRows,int imageCols){
-	    	short[][] bufRed, bufGreen, bufBlue;
+	    public BufferedImage MSRCR(int imageRows,int imageCols){
 	    	BufferedImage finishedImage;
 	    	//int linearImageArraySize = imageRows * imageCols * 3;//3 for RGB.
 	    	
-	    	
-		    bufRed = bufferedImageRed;
-		    bufGreen = bufferedImageGreen;
-		    bufBlue = bufferedImageBlue;
 		    
 		    //imageChannels = linearise(bufRed, bufGreen, bufBlue, imageRows, imageCols);//Linearised Image.
+		    
+		    
+		    reflectance(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);
 		    
 	    	// normalisation
 		    // normalise();
 	    	
-	    	finishedImage = packImage(bufRed, bufGreen, bufBlue);
-	    	this.bufferedImageRed = bufRed;
-	    	this.bufferedImageGreen = bufGreen;
-	    	this.bufferedImageBlue = bufBlue;
+	    	finishedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
 	    	return finishedImage;
 	    }
 	
