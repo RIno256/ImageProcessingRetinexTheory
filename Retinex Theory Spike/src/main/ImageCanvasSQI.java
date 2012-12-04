@@ -7,6 +7,7 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.awt.image.Kernel;
 import java.io.File;
 
 import javax.imageio.ImageIO;
@@ -33,6 +34,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
     	private short[][] bufferedImageBlue;
 		
 		private BufferedImage loadedImage, processedImage; //image object of input image
+		private Kernel kernel;
 		
 		public ImageCanvasSQI(MyRetinexSQI retinexSQI){
 			//setBackground(Color.white);
@@ -57,6 +59,8 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        	SaveImage();
 	        }
 	        if (event.getActionCommand().equalsIgnoreCase("process image")){
+	        	processedImage = gaussianBlur(loadedImage);
+	        	unpackImage(processedImage);
 	        	processedImage = MSRCR(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, totalRows, totalCols);
 	        	
 	        }
@@ -97,10 +101,10 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		}
 	
 		public void SaveImage(){
-			processedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
+			//processedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
             File savedFile=new File("test.jpg");
             try {
-            ImageIO.write(processedImage,"jpeg",savedFile);
+            ImageIO.write(processedImage,"png",savedFile);
             //Image image = retinexSQI.getToolkit().getImage(savedFile.getPath());
     		//Graphics2D g2d = processedImage.createGraphics();
     		//g2d.drawImage(image, 0, 0, retinexSQI);
@@ -158,7 +162,6 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        bufferedImageData = bufferedImage.getRGB(0, 0, bufferedImage.getWidth(),
 	                                           bufferedImage.getHeight(), null, 0,
 	                                           bufferedImage.getWidth());
-
 	        int index;
 	        for (int currentRow = 0; currentRow < totalRows; currentRow++) {
 	            for (int currentCol = 0; currentCol < totalCols; currentCol++) {
@@ -202,46 +205,24 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    	
 	    	for(int i = 0; i < imageRows ; i++)
 	    		for(int j = 0; j < imageCols ; j++){
-	    			linearisedImage[0][(i*j)+j] = (float)bufferedImageRed[i][j];
-	    			linearisedImage[1][(i*j)+j] = (float)bufferedImageRed[i][j];
-	    			linearisedImage[2][(i*j)+j] = (float)bufferedImageRed[i][j];
+	    			linearisedImage[0][(i*imageCols)+j] = (float)bufferedImageRed[i][j];
+	    			linearisedImage[1][(i*imageCols)+j] = (float)bufferedImageGreen[i][j];
+	    			linearisedImage[2][(i*imageCols)+j] = (float)bufferedImageBlue[i][j];
 	    		}
 	    	return linearisedImage;
 	    }
 	    
-	    public short[][][] delinearise (float[][] imageChannels, int imageRows, int imageCols){
-	    	short[][][] colourChannels = new short[3][imageRows][imageCols];
+	    public short[][] delinearise (float[] imageChannels, int imageRows, int imageCols,int channel){
+	    	short[][] colourChannel = new short[imageRows][imageCols];
 	    	
 	    	for(int i = 0; i < imageRows; i++){//For each width.//For each red, green, blue.-----------------------------De-linearise.
 	    		for(int j=0; j < imageCols; j++){//For each height.
-	    			colourChannels[0][i][j]= (short)imageChannels[0][(i*j)+j];//Change short to float.
-	    			colourChannels[1][i][j]= (short)imageChannels[1][(i*j)+j];;
-	    			colourChannels[2][i][j]= (short)imageChannels[2][(i*j)+j];;
+	    			colourChannel[i][j]= (short)imageChannels[(i*imageCols)+j];//Change float to short.
 	    		}		    		
 	    	}
-			return colourChannels;
+			return colourChannel;
 	    }
 	    
-	    public void normalise(){
-		    /*for(channel = 0;channel < 3; channel++)//For each red, green, blue.
-			       for(int i=0; i<imageRows; i++)
-			    	   for(int j=0; j<imageCols; j++) {
-			    		   if(imageChannels[channel][(i*j)+j]<rmin) rmin=imageChannels[channel][(i*j)+j];
-			    		   if(imageChannels[channel][(i*j)+j]>rmax) rmax=imageChannels[channel][(i*j)+j];
-			    	   }	
-
-			       rmax -= rmin;
-
-			    for(channel = 0;channel < 3; channel++)//For each red, green, blue.
-			       for(int i=0; i<imageRows; i++)
-			        	for(int j=0; j<imageCols; j++) {
-			        		temp=255f*(imageChannels[channel][(i*j)+j]-rmin)/rmax;
-
-			        		// Grad[i][j]=(float)Math.log(temp+1); // log space
-			        		//   Grad[i][j]=temVal[i][j]; // value
-			        		imageChannels[channel][(i*j)+j]=temp; // normalised image
-			        	}*/
-	    }
 	    
 	    /**
 	     * Retinex Algorithm.
@@ -251,222 +232,135 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	     */
 	    public BufferedImage MSRCR(short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][]
 	    						  bufferedImageBlue,int imageRows,int imageCols){
-
+	    	short[][] bufRed, bufGreen, bufBlue;
 	    	BufferedImage finishedImage;
 	    	//int linearImageArraySize = imageRows * imageCols * 3;//3 for RGB.
-	    	int linearChannelArraySize = imageRows * imageCols;
-	    	int channel;
 	    	
-	    	//float[] imageRGB= new float[linearImageArraySize];
-	    	//float[] out = new float[linearChannelArraySize];
-	    	float[][] imageChannels = new float[3][linearChannelArraySize];//3 for RGB.
-	    	short[][] currentChannel = new short[imageRows][imageCols];//Used to store current channel information.
-		    float rmin = Float.MAX_VALUE;
-		    float rmax = Float.MIN_VALUE;
-		    float temp;
+	    	
+		    bufRed = bufferedImageRed;
+		    bufGreen = bufferedImageGreen;
+		    bufBlue = bufferedImageBlue;
 		    
-		    imageChannels = linearise(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);//Linearised Image.
+		    //imageChannels = linearise(bufRed, bufGreen, bufBlue, imageRows, imageCols);//Linearised Image.
 		    
 	    	// normalisation
 		    // normalise();
-		    
-	    	imageChannels = GaussianBlur(imageChannels,imageRows,imageCols);//GaussianBlur.
 	    	
-	    	delinearise(imageChannels, imageRows, imageCols);
-
-	    	finishedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
+	    	finishedImage = packImage(bufRed, bufGreen, bufBlue);
+	    	this.bufferedImageRed = bufRed;
+	    	this.bufferedImageGreen = bufGreen;
+	    	this.bufferedImageBlue = bufBlue;
 	    	return finishedImage;
 	    }
+	
 	    
+		public static int clamp(int c) {
+			if (c < 0)
+				return 0;
+			if (c > 255)
+				return 255;
+			return c;
+		}
 	    /**
-	     * Gaussian Blur
+	     * http://www.jhlabs.com/ip/GaussianFilter.java
 	     * 
-	     * @param imageChannels
-	     * @param imageRows
-	     * @param imageCols
+	     * @param src
 	     * @return
 	     */
-	    public float[][] GaussianBlur(float[][] imageChannels, int imageRows, int imageCols){
-	    	int size = 3;
-	    	double [] kernel = new double[size*size];
-	    	double total, tot;
-	    	float [][] smoothImage = new float[3][imageRows*imageCols];
-	    	float [] RGBToHSVTemp = new float[3];
-	    	float [] HSVToRGBTemp = new float[3];
-	    	  	
-	    	    	
-	    	for(int i=0;i<size;i++)
-	    		for(int j=0;j<size;j++)
-	    			kernel[(i*j)+j]= Math.exp(-((i-(size/2))*(i-(size/2))+(j-(size/2))*(j-(size/2)))/(2*1f*1f));
-	    	
-	    	for(int rows=0;rows < imageRows;rows++)
-	    		for(int cols=0;cols < imageCols;cols++){
-	    			RGBToHSVTemp[0] = imageChannels[0][rows + cols];
-	    			RGBToHSVTemp[1] = imageChannels[1][rows + cols];
-	    			RGBToHSVTemp[2] = imageChannels[2][rows + cols];
-	    				
-	    			RGBToHSVTemp = RGBtoHSV(RGBToHSVTemp);//Converts the RGB to HSV;
-	    				
-    				smoothImage[0][rows + cols] = RGBToHSVTemp[0];
-    				smoothImage[1][rows + cols] = RGBToHSVTemp[1];
-    				smoothImage[2][rows + cols] = RGBToHSVTemp[2];		
-	    		}   
-
-	    				
-	    	for(int row=0; row < imageRows; row++){
-	    	      for(int col=0; col < imageCols; col++) {
-	    	      total=tot=0f;
-		    	      for(int channel=0; channel<3;channel++){     
-			    	      for(int i=0; i<size; i++)
-			    	    	  for(int j=0; j<size; j++)
-			    	    		  if((row-size/2+i)>=0 && (row-size/2+i)<imageRows && (col-size/2+j)>=0 && (col-size/2+j)<imageCols) {   
-			    	    			  total += kernel[(i*j)+j] * imageChannels[channel][(col-size/2+j)+(row-size/2+i)];
-			    	    			  tot += kernel[(i*j)+j];
-			    	    		  }
-			    	      smoothImage[channel][(row*col)+col]=(float) (total/tot);
-			    	  }
-		    	}
-	    	}
-	    	
-	    		    	
-	    	for(int rows=0;rows < imageRows;rows++)
-	    		for(int cols=0;cols < imageCols;cols++){
-	    			HSVToRGBTemp[0] = smoothImage[0][rows + cols];
-	    			HSVToRGBTemp[1] = smoothImage[1][rows + cols];
-	    			HSVToRGBTemp[2] = smoothImage[2][rows + cols];
-	    				
-	    			HSVToRGBTemp = HSVtoRGB(HSVToRGBTemp);//Converts the RGB to HSV;
-	    	
-	    				
-    				smoothImage[0][rows + cols] = HSVToRGBTemp[0];
-    				smoothImage[1][rows + cols] = HSVToRGBTemp[1];
-    				smoothImage[2][rows + cols] = HSVToRGBTemp[2];
-	    			
-	    			
-	    		}
-	    	
-	    	return smoothImage;
-	    }
-	    /**
-	     * Taken from SC24110
-	     * 
-	     * @param r
-	     * @param g
-	     * @param b
-	     * @return
-	     */
-	    public float[] RGBtoHSV(float[] RGB)
-	    {
-	    	float min, max, delta;
-	        float r, g, b;    
-	    	float h, s, v;
+	    public BufferedImage gaussianBlur( BufferedImage src) {
+	        int width = src.getWidth();
+	        int height = src.getHeight();
+	        kernel = make1DKernel(3);
 	        
-	        r = RGB[0];
-	        g = RGB[1];
-	        b = RGB[2];
-	            r /= 255f; g /= 255f; b /= 255f;
+	        int[] inPixels = new int[width*height];
+	        int[] outPixels = new int[width*height];
+	        src.getRGB( 0, 0, width, height, inPixels, 0, width );
 
-	    	min = Math.min(Math.min(r, g), b );
-	    	max = Math.max(Math.max(r, g), b );
+			convolveAndTranspose(kernel, inPixels, outPixels, width, height);
+			convolveAndTranspose(kernel, outPixels, inPixels, height, width);
 
-	    	v = max;				// v
-
-	    	delta = max - min;
-
-	    	if( max == 0 )
-	    		// r = g = b = 0		// s = 0, v is undefined
-	    		s = 0f;
-
-	            else s = delta / max; // s
-
-	            if(delta != 0) {
-	    	if( r == max ) {
-	    		h = ( g - b ) / delta;		// between yellow & magenta
-	                    if( h < 0 )
-	    		h += 6f;
-	                    }
-	    	else { if( g == max )
-	    		h = 2f + ( b - r ) / delta;	// between cyan & yellow
-	    	else
-	    		h = 4f + ( r - g ) / delta;	// between magenta & cyan
-	            }
-
-	    	h *= 60f;				// degrees
-
-	    	} else { h=0f; }
-
-	            return new float[] {h,s,v};
-	    	//System.out.print("h= "+h+" "+s+" "+v);
-
+	        BufferedImage dst = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			dst.setRGB( 0, 0, width, height, inPixels, 0, width );
+	        return dst;
 	    }
-	    
-	    
-	    public float[] HSVtoRGB(float[] HSV)
-	    {
-	    	int i;
-	    	float f, p, q, t;
-	        float r, g, b;
-	        float h, s, v;
-	        
-	        h = HSV[0];
-	        s = HSV[1];
-	        v = HSV[2];
+		/**
+		 * 
+		 * http://www.jhlabs.com/ip/GaussianFilter.java
+		 * 
+		 * @param kernel
+		 * @param inPixels
+		 * @param outPixels
+		 * @param width
+		 * @param height
+		 */
+		public static void convolveAndTranspose(Kernel kernel, int[] inPixels, int[] outPixels, int width, int height) {
+			float[] matrix = kernel.getKernelData( null );
+			int cols = kernel.getWidth();
+			int halfCols = cols/2;
 
-	            v *= 255f;
+			for (int y = 0; y < height; y++) {
+				int index = y;
+				int ioffset = y*width;
+				for (int x = 0; x < width; x++) {
+					float r = 0, g = 0, b = 0, a = 0;
+					int moffset = halfCols;
+					for (int col = -halfCols; col <= halfCols; col++) {
+						float f = matrix[moffset+col];
 
-	    	if( s == 0 ) {
-	    		r = g = b = v;
-	    		return new float[] {r, g, b};
-	    	}
+						if (f != 0) {
+							int ix = x+col;
+							if ( ix < 0 ) {
+									ix = 0;
+							} else if ( ix >= width) {
+									ix = width-1;
+							}
+							int rgb = inPixels[ioffset+ix];
+							a += f * ((rgb >> 24) & 0xff);
+							r += f * ((rgb >> 16) & 0xff);
+							g += f * ((rgb >> 8) & 0xff);
+							b += f * (rgb & 0xff);
+						}
+					}
+					int ia = clamp((int)(a+0.5));// : 0xff;
+					int ir = clamp((int)(r+0.5));
+					int ig = clamp((int)(g+0.5));
+					int ib = clamp((int)(b+0.5));
+					outPixels[index] = (ia << 24) | (ir << 16) | (ig << 8) | ib;
+	                index += height;
+				}
+			}
+		}
+		/**
+		 * http://www.jhlabs.com/ip/GaussianFilter.java
+		 * 
+		 * 
+		 * @param radius
+		 * @return
+		 */
+		public static Kernel make1DKernel(float radius) {
+			int r = (int)Math.ceil(radius);
+			int rows = r*2+1;
+			float[] matrix = new float[rows];
+			float sigma = radius/3;
+			float sigma22 = 2*sigma*sigma;
+			float sigmaPi2 = 2*((float)Math.PI)*sigma;
+			float sqrtSigmaPi2 = (float)Math.sqrt(sigmaPi2);
+			float radius2 = radius*radius;
+			float total = 0;
+			int index = 0;
+			for (int row = -r; row <= r; row++) {
+				float distance = row*row;
+				if (distance > radius2)
+					matrix[index] = 0;
+				else
+					matrix[index] = (float)Math.exp(-(distance)/sigma22) / sqrtSigmaPi2;
+				total += matrix[index];
+				index++;
+			}
+			for (int i = 0; i < rows; i++)
+				matrix[i] /= total;
 
-	    	h /= 60f;
-	    	i=0;			// sector 0 to 5
-	    	for(int j=0; j<6; j++)
-	            if(h>=j && h<j+1)
-	    	i=j;
-
-	    	f = h - i;			// factorial part of h
-	    	p = v * ( 1 - s );
-	    	q = v * ( 1 - s * f );
-	    	t = v * ( 1 - s * ( 1 - f ) );
-
-	    	switch( i ) {
-	    		case 0:
-	    			r = v;
-	    			g = t;
-	    			b = p;
-	    			break;
-	    		case 1:
-	    			r = q;
-	    			g = v;
-	    			b = p;
-	    			break;
-	    		case 2:
-	    			r = p;
-	    			g = v;
-	    			b = t;
-	    			break;
-	    		case 3:
-	    			r = p;
-	    			g = q;
-	    			b = v;
-	    			break;
-	    		case 4:
-	    			r = t;
-	    			g = p;
-	    			b = v;
-	    			break;
-	    		default:		// case 5:
-	    			r = v;
-	    			g = p;
-	    			b = q;
-	    			break;
-	    	}
-
-	           return new float[] {r, g, b};
-
-	    }
-
-
+			return new Kernel(rows, 1, matrix);
+		}
 
 }
