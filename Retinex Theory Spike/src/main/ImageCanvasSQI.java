@@ -32,9 +32,22 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
     	private short[][] bufferedImageRed;
     	private short[][] bufferedImageGreen;
     	private short[][] bufferedImageBlue;
+    	
+    	private double[][] processedImageRed;//Double to avoid rounding erros in calculations.
+    	private double[][] processedImageGreen;
+    	private double[][] processedImageBlue;
 		
 		private BufferedImage loadedImage, processedImage; //image object of input image
 		private Kernel kernel;
+		private int[] bufferedImageData2;
+		private short[][] bufferedImageRed2;
+		private short[][] bufferedImageGreen2;
+		private short[][] bufferedImageBlue2;
+		private int[][] processedIntImageRed2;
+		private int[][] processedIntImageGreen2;
+		private int[][] processedIntImageBlue2;
+		private int totalRows2;
+		private int totalCols2;
 		
 		public ImageCanvasSQI(MyRetinexSQI retinexSQI){
 			//setBackground(Color.white);
@@ -59,9 +72,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        	SaveImage();
 	        }
 	        if (event.getActionCommand().equalsIgnoreCase("process image")){
-	        	//processedImage = gaussianBlur(loadedImage);
-	        	//unpackImage(processedImage);
-	        	processedImage = MSRCR(totalRows, totalCols);
+	        	processedImage = MSRCR(loadedImage);
 	        	
 	        }
 	    
@@ -93,7 +104,6 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 				imageName = dir.getPath();//Get's the directory of the file as a string.
 				
 				loadedImage = MyImageUtilities.getBufferedImage(imageName, retinexSQI);
-				unpackImage(loadedImage);
 			}
 			else{
 				System.out.println("Nothing Selected!");
@@ -171,9 +181,35 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        }
 	    }
 	    
-	    public BufferedImage packImage(short[][] processedImageRed,
-                								short[][] proccesedImageGreen,
-                								short[][] processedImageBlue ) {
+	    public void unpackImage2(BufferedImage bufferedImage) {
+
+			
+			if (bufferedImage.getHeight() != totalRows2 || bufferedImage.getWidth() != totalCols2) {
+	            totalRows2 = bufferedImage.getHeight();
+	            totalCols2 = bufferedImage.getWidth();
+
+	            bufferedImageRed2   = new short[totalRows2][totalCols2];
+	            bufferedImageGreen2 = new short[totalRows2][totalCols2];
+	            bufferedImageBlue2  = new short[totalRows2][totalCols2];
+	        }
+
+	        bufferedImageData2 = bufferedImage.getRGB(0, 0, bufferedImage.getWidth(),
+	                                           bufferedImage.getHeight(), null, 0,
+	                                           bufferedImage.getWidth());
+	        int index;
+	        for (int currentRow = 0; currentRow < totalRows2; currentRow++) {
+	            for (int currentCol = 0; currentCol < totalCols2; currentCol++) {
+	                index = (currentRow * totalCols2) + currentCol;
+	                unpackPixel(bufferedImageData2[index], bufferedImageRed2, bufferedImageGreen2, bufferedImageBlue2, currentRow, currentCol);
+	            }
+	        }
+	    }
+	    
+	    
+	    
+	    public BufferedImage packImage(int[][] processedImageRed,
+                								int[][] proccesedImageGreen,
+                								int[][] processedImageBlue ) {
 	    	
 			int[] newBufferedImageData = new int[totalRows * totalCols];
 	    	int index;
@@ -194,9 +230,40 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    			newImage.setRGB(col, row, newBufferedImageData[index]);
 	    		}
 	    	}
+	    	
+	    	
 
 	    	return newImage;
 	    }
+	    
+	    public BufferedImage packImage2(int[][] processedImageRed,
+				int[][] proccesedImageGreen,
+				int[][] processedImageBlue ) {
+
+int[] newBufferedImageData = new int[totalRows2 * totalCols2];
+int index;
+for (int currentRow = 0; currentRow < totalRows2; currentRow++) {
+for (int currentCol = 0; currentCol < totalCols2; currentCol++) {
+index = (currentRow * totalCols2) + currentCol;
+newBufferedImageData[index] = packPixel(processedImageRed[currentRow][currentCol],
+				proccesedImageGreen[currentRow][currentCol],
+				processedImageBlue[currentRow][currentCol]
+				);
+}
+}
+
+BufferedImage newImage = new BufferedImage(totalCols2, totalRows2, BufferedImage.TYPE_INT_RGB);
+for (int row = 0; row < totalRows2; row++) {
+for (int col = 0; col < totalCols2; col++) {
+index = (row * totalCols2) + col;
+newImage.setRGB(col, row, newBufferedImageData[index]);
+}
+}
+
+
+
+return newImage;
+}
 	    
 	    public void reflectance(short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][]
 	    						bufferedImageBlue,int imageRows,int imageCols){
@@ -224,9 +291,13 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    			green = bufferedImageGreen[i][j];
 	    			blue = bufferedImageBlue[i][j];
 	    			
-	    			this.bufferedImageRed[i][j] = (short) ((red/redMax)*155);
-	    			this.bufferedImageGreen[i][j] = (short) ((green/greenMax)*155);
-	    			this.bufferedImageBlue[i][j] = (short) ((blue / blueMax)*155);
+	    			refRed[i][j] =((red/redMax)*255f);
+	    			refGreen[i][j] =((green/greenMax)*255f);
+	    			refBlue[i][j] = ((blue/blueMax)*255f);
+	    			
+	    			this.bufferedImageRed[i][j]=(short) refRed[i][j];
+	    			this.bufferedImageGreen[i][j]=(short) refGreen[i][j];
+	    			this.bufferedImageBlue[i][j]=(short) refBlue[i][j];
 	    			
 	    		}
 	    	
@@ -269,20 +340,41 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	     * Takes in the image's red, green, blue information for each pixel as 3 short[][].
 	     * Takes in image rows for height and cols for width as ints.
 	     */
-	    public BufferedImage MSRCR(int imageRows,int imageCols){
+	    public BufferedImage MSRCR(BufferedImage src){
 	    	BufferedImage finishedImage;
 	    	//int linearImageArraySize = imageRows * imageCols * 3;//3 for RGB.
-	    	
-		    
+
 		    //imageChannels = linearise(bufRed, bufGreen, bufBlue, imageRows, imageCols);//Linearised Image.
 		    
 		    
-		    reflectance(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);
+		    //reflectance(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);
+		    finishedImage = gaussianBlur(src);//Not ideal.
 		    
-	    	// normalisation
-		    // normalise();
-	    	
-	    	finishedImage = packImage(bufferedImageRed, bufferedImageGreen, bufferedImageBlue);
+		    unpackImage2(finishedImage);
+		    processedImageRed= new double[totalRows2][totalCols2];
+			processedImageGreen=new double[totalRows2][totalCols2];
+			processedImageBlue=new double[totalRows2][totalCols2];
+		    //Singlescalar retinex.
+		    for(int i=0;i<totalRows2;i++){
+		    	for(int j=0;j<totalCols2;j++){
+		    		processedImageRed[i][j] = 10*(Math.log(bufferedImageRed2[i][j]) - Math.log((bufferedImageRed2[i][j])*bufferedImageRed2[i][j]));
+		    		processedImageGreen[i][j] = 10*(Math.log(bufferedImageGreen2[i][j]) - Math.log((bufferedImageGreen2[i][j])*bufferedImageGreen2[i][j]));
+		    		processedImageBlue[i][j] = 10*(Math.log(bufferedImageBlue2[i][j]) - Math.log((bufferedImageBlue2[i][j])*bufferedImageBlue2[i][j]));
+		    	}
+		    }
+			processedIntImageRed2= new int[totalRows2][totalCols2];
+			processedIntImageGreen2=new int[totalRows2][totalCols2];
+			processedIntImageBlue2=new int[totalRows2][totalCols2];
+
+			
+		    for(int i=0;i<totalRows2;i++)
+		    	for(int j=0;j<totalCols2;j++){
+		    		processedIntImageRed2[i][j] = (int)processedImageRed[i][j];
+		    		processedIntImageGreen2[i][j] = (int)processedImageGreen[i][j];
+		    		processedIntImageBlue2[i][j] = (int)processedImageBlue[i][j];
+		    	}
+		    
+	    	finishedImage = packImage2(processedIntImageRed2, processedIntImageGreen2, processedIntImageBlue2);
 	    	return finishedImage;
 	    }
 	
