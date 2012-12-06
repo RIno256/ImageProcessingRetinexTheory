@@ -35,9 +35,6 @@ public class MyImageUtilities {
 	  
 	  /** Take an Image associated with a file, and wait until it is
 	   *  done loading. Just a simple application of MediaTracker.
-	   *  If you are loading multiple images, don't use this
-	   *  consecutive times; instead use the version that takes
-	   *  an array of images.
 	   */
 	
 	public static boolean waitForImage(Image image, Component c) {
