@@ -328,7 +328,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 			
 			
 			
-			return new Kernel();	
+			return null;//new Kernel();	
 		}
 
 }
