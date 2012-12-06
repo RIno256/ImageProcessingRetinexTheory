@@ -10,7 +10,12 @@ public class ImageHandler {
 	private int[] bufferedImageData;
 	private short[][] bufferedImageRed;
 	private short[][] bufferedImageGreen;
-	private short[][] bufferedImageBlue;	
+	private short[][] bufferedImageBlue;
+	
+	private float[][] hueI, satI, valI;
+	private float[] tempHSV;
+	private float r, g, b;
+	private short[][] redI, greenI, blueI;
 	
 	public ImageHandler(BufferedImage image){
 		this.image = image;
@@ -132,9 +137,77 @@ public class ImageHandler {
 		return bufferedImageBlue;
 	}
 	
+	public void RGBtoHSV(){
+    	//Convert RGB to HSV. Only the V is used here to help create a more efficient Guassian Blue.
+    
+    	tempHSV = new float[3];
+    	hueI = new float[totalRows][totalCols];
+    	satI = new float[totalRows][totalCols];
+    	valI = new float[totalRows][totalCols];
+    	
+    	for(int i=0;i<totalRows;i++)
+    		for(int j=0;j<totalCols;j++){
+
+    			r = redI[i][j];
+    			g = greenI[i][j];
+    			b = blueI[i][j];
+    			
+    			tempHSV = RBGtoHSV(r, g, b);
+    			
+    			hueI[i][j] = tempHSV[0];
+    			satI[i][j] = tempHSV[1];
+    			valI[i][j] = tempHSV[2];
+    		}
+	}
+
+    /**
+     * Converts RGB colour arrays for a given image into HSV.
+     */
+	private float[] RBGtoHSV(float r, float g, float b) {
+		
+		float min, max, delta;
+		float h, s, v;
+		
+		r /= 255f; g /= 255f; b /= 255f;
+		
+		min = Math.min(Math.min(r, g), b);
+		max = Math.max(Math.max(r, g), b);
+		
+		v = max;
+		
+		delta = max - min;
+		
+		if(max == 0){s = 0f;}
+		else{s = delta /max;}
+		
+		if(delta != 0){
+			if(r == max){
+				h = (g-b)/delta;
+				if(h < 0){h += 6f;}
+			}else{
+				if(g == max){
+					h = 2f + (b - r)/delta;
+				}else{h = 4f + ( r - g ) / delta;}
+			}
+			
+			h *= 60f;
+		}else{h = 0f;}
+		return new float[] {h,s,v};
+	}
+
+	public float[][] getHueI() {
+		return hueI;
+	}
+
+	public float[][] getSatI() {
+		return satI;
+	}
+
+	public float[][] getValI() {
+		return valI;
+	}
 	
-    
-    
+	
 
 	
 	

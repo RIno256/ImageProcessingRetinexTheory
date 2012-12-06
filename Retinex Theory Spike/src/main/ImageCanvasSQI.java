@@ -112,49 +112,9 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		
 
 	    
-	    public void reflectance(short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][]
-	    						bufferedImageBlue,int imageRows,int imageCols){
-	    
-	    	float[][] refRed = new float[imageRows][imageCols],
-	    			  refGreen = new float[imageRows][imageCols], 
-	    			  refBlue= new float[imageRows][imageCols];
-	    	float red, green, blue;
-	    	float redMax = 0, greenMax = 0, blueMax = 0;
-	    	
-	    	for(int i=0;i<imageRows;i++)
-	    		for(int j=0; j<imageCols;j++){
-	    			red = bufferedImageRed[i][j];
-	    			green = bufferedImageGreen[i][j];
-	    			blue = bufferedImageBlue[i][j];
-	    			
-	    			if(redMax < red){redMax = red;}
-	    			if(greenMax < green){greenMax = green;}
-	    			if(blueMax < blue){blueMax = blue;}
-	    		}
-	    	for(int i = 0;i<imageRows;i++)
-	    		for(int j = 0;j<imageCols;j++){
-	    				    			
-	    			red = bufferedImageRed[i][j];
-	    			green = bufferedImageGreen[i][j];
-	    			blue = bufferedImageBlue[i][j];
-	    			
-	    			refRed[i][j] =((red/redMax)*255f);
-	    			refGreen[i][j] =((green/greenMax)*255f);
-	    			refBlue[i][j] = ((blue/blueMax)*255f);
-	    			
-	    			//this.bufferedImageRed[i][j]=(short) refRed[i][j];
-	    			//this.bufferedImageGreen[i][j]=(short) refGreen[i][j];
-	    			//this.bufferedImageBlue[i][j]=(short) refBlue[i][j];
-	    			
-	    		}
-	    	
-	    	
-	    	
-	    	
-	    	
+	    public void reflectance(){
 	    	
 	    }
-	    
 	    
 	    public float[][] linearise (short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][] 
 	    						bufferedImageBlue,int imageRows,int imageCols){
@@ -193,40 +153,17 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    	int totalRows, totalCols;
 	    	totalRows = loadedImage.getTotalRows();
 	    	totalCols = loadedImage.getTotalCols();
-	    	
-	    	float[][] hueI, satI, valI;
-	    	float[] tempHSV;
-	    	float r, g, b;
-	    	short[][] redI, greenI, blueI;
-	    	
-	    	//Convert RGB to HSV. Only the V is used here to help create a more efficient Guassian Blue.
-	    	redI = loadedImage.getBufferedImageRed();
-	    	greenI = loadedImage.getBufferedImageGreen();
-	    	blueI = loadedImage.getBufferedImageBlue();
-	    	tempHSV = new float[3];
-	    	hueI = new float[totalRows][totalCols];
-	    	satI = new float[totalRows][totalCols];
-	    	valI = new float[totalRows][totalCols];
-	    	
-	    	for(int i=0;i<totalRows;i++)
-	    		for(int j=0;j<totalCols;j++){
 
-	    			r = redI[i][j];
-	    			g = greenI[i][j];
-	    			b = blueI[i][j];
-	    			
-	    			tempHSV = RBGtoHSV(r, g, b);
-	    			
-	    			hueI[i][j] = tempHSV[0];
-	    			satI[i][j] = tempHSV[1];
-	    			valI[i][j] = tempHSV[2];
-	    		}
+	    	
+	    	
 	    	
 	    	
 		    
 		    //reflectance(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);
-		    imageTemp = gaussianBlur(loadedImage.getImage());//Not ideal.
-		    /*
+		    //imageTemp = gaussianBlur(loadedImage.getImage());//Not ideal.
+		    loadedImage = gaussianBlur(loadedImage);
+		    imageTemp = loadedImage.getImage();
+	    	/*
 		    unpackImage2(finishedImage);
 		    processedImageRed= new double[totalRows2][totalCols2];
 			processedImageGreen=new double[totalRows2][totalCols2];
@@ -258,40 +195,6 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		    return finishedImage;
 	    }
 	
-	    /**
-	     * Converts RGB colour arrays for a given image into HSV.
-	     */
-		private float[] RBGtoHSV(float r, float g, float b) {
-			
-			float min, max, delta;
-			float h, s, v;
-			
-			r /= 255f; g /= 255f; b /= 255f;
-			
-			min = Math.min(Math.min(r, g), b);
-			max = Math.max(Math.max(r, g), b);
-			
-			v = max;
-			
-			delta = max - min;
-			
-			if(max == 0){s = 0f;}
-			else{s = delta /max;}
-			
-			if(delta != 0){
-				if(r == max){
-					h = (g-b)/delta;
-					if(h < 0){h += 6f;}
-				}else{
-					if(g == max){
-						h = 2f + (b - r)/delta;
-					}else{h = 4f + ( r - g ) / delta;}
-				}
-				
-				h *= 60f;
-			}else{h = 0f;}
-			return new float[] {h,s,v};
-		}
 
 		public static int clamp(int c) {
 			if (c < 0)
@@ -300,7 +203,21 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 				return 255;
 			return c;
 		}
-	    /**
+	    
+		/**
+		 * HSV version
+		 * @param img takes image information as an image handler.
+		 */
+		public ImageHandler gaussianBlur(ImageHandler img){
+	        kernel = make1DKernel(3);
+	        
+	        
+	        
+	        
+	        return img;
+		}
+		
+		/**
 	     * http://www.jhlabs.com/ip/GaussianFilter.java
 	     * 
 	     * @param src
@@ -314,14 +231,15 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        int[] inPixels = new int[width*height];
 	        int[] outPixels = new int[width*height];
 	        src.getRGB( 0, 0, width, height, inPixels, 0, width );
-
+	        
 			convolveAndTranspose(kernel, inPixels, outPixels, width, height);
 			convolveAndTranspose(kernel, outPixels, inPixels, height, width);
-
+			
 	        BufferedImage dst = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 			dst.setRGB( 0, 0, width, height, inPixels, 0, width );
 	        return dst;
 	    }
+	    
 		/**
 		 * 
 		 * http://www.jhlabs.com/ip/GaussianFilter.java
@@ -336,7 +254,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 			float[] matrix = kernel.getKernelData( null );
 			int cols = kernel.getWidth();
 			int halfCols = cols/2;
-
+			
 			for (int y = 0; y < height; y++) {
 				int index = y;
 				int ioffset = y*width;
@@ -345,7 +263,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 					int moffset = halfCols;
 					for (int col = -halfCols; col <= halfCols; col++) {
 						float f = matrix[moffset+col];
-
+				
 						if (f != 0) {
 							int ix = x+col;
 							if ( ix < 0 ) {
@@ -377,7 +295,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		 * @return
 		 */
 		public static Kernel make1DKernel(float radius) {
-			int r = (int)Math.ceil(radius);
+			/*int r = (int)Math.ceil(radius);
 			int rows = r*2+1;
 			float[] matrix = new float[rows];
 			float sigma = radius/3;
@@ -399,7 +317,18 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 			for (int i = 0; i < rows; i++)
 				matrix[i] /= total;
 
-			return new Kernel(rows, 1, matrix);
+			return new Kernel(rows, 1, matrix);*/
+			
+			int r = (int)Math.ceil(radius);
+			int rows = r*2 + 1;
+			float[] matrix = new float[rows];
+			float sigma = radius/3;
+			
+			
+			
+			
+			
+			return new Kernel();	
 		}
 
 }
