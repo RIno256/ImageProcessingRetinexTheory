@@ -112,32 +112,29 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		
 
 	    
-	    public void reflectance(){
+	    public ImageHandler reflectance(ImageHandler img, double c){
+			
+	    	float[][] valI, valG;
+	    	double[][] ref;
+	    	int rows, cols;
+	    	rows = img.getTotalRows();
+	    	cols = img.getTotalCols();
 	    	
-	    }
-	    
-	    public float[][] linearise (short[][] bufferedImageRed,short[][] bufferedImageGreen,short[][] 
-	    						bufferedImageBlue,int imageRows,int imageCols){
-	    	float[][] linearisedImage = new float[3][imageRows * imageCols];
+	    	valI = img.getValI();
+	    	valG = img.getGausValI();
+	    	ref = new double[rows][cols];
 	    	
-	    	for(int i = 0; i < imageRows ; i++)
-	    		for(int j = 0; j < imageCols ; j++){
-	    			linearisedImage[0][(i*imageCols)+j] = (float)bufferedImageRed[i][j];
-	    			linearisedImage[1][(i*imageCols)+j] = (float)bufferedImageGreen[i][j];
-	    			linearisedImage[2][(i*imageCols)+j] = (float)bufferedImageBlue[i][j];
+	    	
+	    	for(int i=0;i<rows;i++)
+	    		for(int j=0;j<cols;j++){
+	    			ref[i][j] = ((((valI[i][j])+c)/((Math.max(valI[i][j], valG[i][j]))+ c)));
+	    			if(ref[i][j] > 0){
+	    				System.out.println(ref[i][j]);
+	    			}
 	    		}
-	    	return linearisedImage;
-	    }
-	    
-	    public short[][] delinearise (float[] imageChannels, int imageRows, int imageCols,int channel){
-	    	short[][] colourChannel = new short[imageRows][imageCols];
+	    	//img.setReflectance(ref);
+	    	return img;
 	    	
-	    	for(int i = 0; i < imageRows; i++){//For each width.//For each red, green, blue.-----------------------------De-linearise.
-	    		for(int j=0; j < imageCols; j++){//For each height.
-	    			colourChannel[i][j]= (short)imageChannels[(i*imageCols)+j];//Change float to short.
-	    		}		    		
-	    	}
-			return colourChannel;
 	    }
 	    
 	    
@@ -161,8 +158,11 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		    
 		    //reflectance(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);
 		    //imageTemp = gaussianBlur(loadedImage.getImage());//Not ideal.
-		    loadedImage = gaussianBlur(loadedImage);
+		    loadedImage.RGBtoHSV();
+	    	loadedImage = gaussianBlur(loadedImage, 3);
 		    imageTemp = loadedImage.getImage();
+		    
+		    reflectance(loadedImage, 1.5);
 	    	/*
 		    unpackImage2(finishedImage);
 		    processedImageRed= new double[totalRows2][totalCols2];
@@ -208,12 +208,58 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		 * HSV version
 		 * @param img takes image information as an image handler.
 		 */
-		public ImageHandler gaussianBlur(ImageHandler img){
-	        kernel = make1DKernel(3);
+		public ImageHandler gaussianBlur(ImageHandler img, int kernSize){
+	        //kernel = make1DKernel(3);
+			float[][] matrix = new float[kernSize][kernSize];
+			float sigma = kernSize/3;
+			float sigma22 = 2*sigma*sigma;
+			float sigmaPi2 = 2*((float)Math.PI)*sigma;
+			float sqrtSigmaPi2 = (float)Math.sqrt(sigmaPi2);
+			float radius2 = kernSize*kernSize;
+			float total = 0;
+			float[][] gausBlur2D = new float[kernSize][kernSize];
+			
+			float[][] valI, gausValI;
+			
+			int cols,rows;
+			int halfKernSize = kernSize/2;
+			
+			 
+			/*Define the kernel in a size by size array */
+			for(int i=0; i<kernSize;i++)
+				for(int j=0; j<kernSize;j++){
+					matrix[i][j] = (float)Math.exp(-(radius2)/sigma22) / sqrtSigmaPi2;
+					total += matrix[i][j];
+				}
+
+	        for(int i=0; i<kernSize;i++)
+				for(int j=0; j<kernSize;j++){
+					gausBlur2D[i][j] = matrix[i][j] / total;
+				}
+	        /*Perform Gaussian Blur on the Value aspect of the image in HSV colour space*/
+
+	        rows = img.getTotalRows();
+	        cols = img.getTotalCols();	  
+	        valI = img.getValI();
 	        
+	       
+	        gausValI = new float[rows][cols];
+	        for(int x=0;x<rows;x++)
+	        	for(int y=0;y<cols;y++){
+	        		gausValI[x][y] =valI[x][y];
+	        	}
 	        
-	        
-	        
+	        for(int x=0;x<rows;x++)
+	        	for(int y=0;y<cols;y++){
+	        		
+			        for(int i=-halfKernSize; i<=halfKernSize;i++)
+			  			for(int j=-halfKernSize; j<=halfKernSize;j++){
+			  				if(x+i > 0 && x+i < rows && y+j > 0 && y+j < cols)//Checks for out of bounds errors on the image V.	
+			  					{gausValI[x+i][y+j] += valI[x+i][y+j]*gausBlur2D[i+halfKernSize][j+halfKernSize];}//Might be problems here with the kernsize.				  				
+			  			}
+			        
+	        	}
+	        img.setGausValI(gausValI);
 	        return img;
 		}
 		
@@ -295,7 +341,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		 * @return
 		 */
 		public static Kernel make1DKernel(float radius) {
-			/*int r = (int)Math.ceil(radius);
+			int r = (int)Math.ceil(radius);
 			int rows = r*2+1;
 			float[] matrix = new float[rows];
 			float sigma = radius/3;
@@ -317,18 +363,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 			for (int i = 0; i < rows; i++)
 				matrix[i] /= total;
 
-			return new Kernel(rows, 1, matrix);*/
-			
-			int r = (int)Math.ceil(radius);
-			int rows = r*2 + 1;
-			float[] matrix = new float[rows];
-			float sigma = radius/3;
-			
-			
-			
-			
-			
-			return null;//new Kernel();	
+			return new Kernel(rows, 1, matrix);
 		}
 
 }

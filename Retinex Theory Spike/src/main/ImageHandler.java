@@ -15,7 +15,10 @@ public class ImageHandler {
 	private float[][] hueI, satI, valI;
 	private float[] tempHSV;
 	private float r, g, b;
-	private short[][] redI, greenI, blueI;
+	
+	private float[][] gausValI;
+	
+	private float[][] reflectance;
 	
 	public ImageHandler(BufferedImage image){
 		this.image = image;
@@ -148,9 +151,9 @@ public class ImageHandler {
     	for(int i=0;i<totalRows;i++)
     		for(int j=0;j<totalCols;j++){
 
-    			r = redI[i][j];
-    			g = greenI[i][j];
-    			b = blueI[i][j];
+    			r = bufferedImageRed[i][j];
+    			g = bufferedImageGreen[i][j];
+    			b = bufferedImageBlue[i][j];
     			
     			tempHSV = RBGtoHSV(r, g, b);
     			
@@ -205,6 +208,22 @@ public class ImageHandler {
 
 	public float[][] getValI() {
 		return valI;
+	}
+
+	public float[][] getGausValI() {
+		return gausValI;
+	}
+
+	public void setGausValI(float[][] gausValI) {
+		this.gausValI = gausValI;
+	}
+
+	public float[][] getReflectance() {
+		return reflectance;
+	}
+
+	public void setReflectance(float[][] reflectance) {
+		this.reflectance = reflectance;
 	}
 	
 	
