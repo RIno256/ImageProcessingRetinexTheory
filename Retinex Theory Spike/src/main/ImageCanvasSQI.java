@@ -114,25 +114,47 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    
 	    public ImageHandler reflectance(ImageHandler img, double c){
 			
-	    	float[][] valI, valG;
-	    	double[][] ref;
+	    	float[][] valI, valG, ref;
 	    	int rows, cols;
 	    	rows = img.getTotalRows();
 	    	cols = img.getTotalCols();
 	    	
 	    	valI = img.getValI();
 	    	valG = img.getGausValI();
-	    	ref = new double[rows][cols];
+	    	ref = new float[rows][cols];
 	    	
 	    	
 	    	for(int i=0;i<rows;i++)
 	    		for(int j=0;j<cols;j++){
-	    			ref[i][j] = ((((valI[i][j])+c)/((Math.max(valI[i][j], valG[i][j]))+ c)));
+	    			ref[i][j] = (float)((((valI[i][j])+c)/((Math.max(valI[i][j], valG[i][j]))+ c)));
 	    			if(ref[i][j] > 0){
-	    				System.out.println(ref[i][j]);
+	    				//System.out.println(ref[i][j]);
 	    			}
 	    		}
-	    	//img.setReflectance(ref);
+	    	img.setReflectance(ref);
+	    	return img;
+	    	
+	    }
+	    
+	    public ImageHandler normalisation(ImageHandler img){
+			
+	    	int rows,cols;
+			float[][] ref;
+			float max, min;
+			
+			rows = img.getTotalRows();
+			cols = img.getTotalCols();
+	    	ref = img.getReflectance();
+			max = Float.MIN_VALUE;
+			min = Float.MAX_VALUE;
+	    	
+	    	for(int i=0;i<rows;i++)
+	    		for(int j=0;j<cols;j++){
+	    			if(max < ref[i][j]){max = ref[i][j];}
+	    			if(ref[i][j] < min){min = ref[i][j];}
+	    		}
+	    	
+	    	System.out.println(max + "\n" + min);
 	    	return img;
 	    	
 	    }
@@ -150,7 +172,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    	int totalRows, totalCols;
 	    	totalRows = loadedImage.getTotalRows();
 	    	totalCols = loadedImage.getTotalCols();
-
+	    	
 	    	
 	    	
 	    	
@@ -163,6 +185,8 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		    imageTemp = loadedImage.getImage();
 		    
 		    reflectance(loadedImage, 1.5);
+		    
+		    normalisation(loadedImage);
 	    	/*
 		    unpackImage2(finishedImage);
 		    processedImageRed= new double[totalRows2][totalCols2];
@@ -179,7 +203,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 			processedIntImageRed2= new int[totalRows2][totalCols2];
 			processedIntImageGreen2=new int[totalRows2][totalCols2];
 			processedIntImageBlue2=new int[totalRows2][totalCols2];
-
+			
 			
 		    for(int i=0;i<totalRows2;i++)
 		    	for(int j=0;j<totalCols2;j++){
