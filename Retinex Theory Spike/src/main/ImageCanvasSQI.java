@@ -2,8 +2,6 @@ package main;
 
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -13,11 +11,14 @@ import java.io.File;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
 import javax.swing.JPanel;
-import javax.swing.filechooser.FileFilter;
 
 public class ImageCanvasSQI extends JPanel implements ActionListener {
 
 	
+		/**
+	 * 
+	 */
+	private static final long serialVersionUID = -752847105553481270L;
 		private MyRetinexSQI retinexSQI;
 		//private static BufferedImage smoothColorImage; //grey image of input image
 		private JFileChooser chooser;//for loading image using a file chooser.
@@ -42,15 +43,16 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		
 	        if (event.getActionCommand().equalsIgnoreCase("load image")){
 	        	loadedImage = LoadImage();
-	        	processedImage = loadedImage;//Initialise the processedImage so the src can be saved as dst if needed.
+	        	//processedImage = loadedImage;//Initialise the processedImage so the src can be saved as dst if needed.
 	        	repaint();
 	          }
 	        
 	        if (event.getActionCommand().equalsIgnoreCase("save image")){
 	        	SaveImage(processedImage);
+	        	repaint();
 	        }
 	        if (event.getActionCommand().equalsIgnoreCase("process image")){
-	        	processedImage = MSRCR(loadedImage);
+	        	processedImage = SSR(loadedImage);
 	        	
 	        }
 	    
@@ -126,7 +128,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    	
 	    	for(int i=0;i<rows;i++)
 	    		for(int j=0;j<cols;j++){
-	    			ref[i][j] = (float)((((valI[i][j])+c)/((Math.max(valI[i][j], valG[i][j]))+ c)));
+	    			ref[i][j] = (float)(Math.log(((valI[i][j])+c)/((Math.max(valI[i][j], valG[i][j]))+ c)));
 	    			if(ref[i][j] > 0){
 	    				//System.out.println(ref[i][j]);
 	    			}
@@ -138,15 +140,18 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    
 	    public ImageHandler normalisation(ImageHandler img){
 			
-	    	int rows,cols;
-			float[][] ref;
+	    	int rows,cols, lowNorm, highNorm;
+			float[][] ref, norm;
 			float max, min;
 			
 			rows = img.getTotalRows();
 			cols = img.getTotalCols();
 	    	ref = img.getReflectance();
+	    	norm = new float[rows][cols];
 			max = Float.MIN_VALUE;
 			min = Float.MAX_VALUE;
+			lowNorm = 0;
+			highNorm = 1;
 	    	
 	    	for(int i=0;i<rows;i++)
 	    		for(int j=0;j<cols;j++){
@@ -154,7 +159,20 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    			if(ref[i][j] < min){min = ref[i][j];}
 	    		}
 	    	
-	    	System.out.println(max + "\n" + min);
+	    	/** a + (x-A)*(b-a)/(B-A) where:
+	    	 * A is min value
+	    	 * B is max value
+	    	 * a is lowest value after normalisation (0)
+	    	 * b is highest value after normalisation (1)
+	    	 * x is the current value
+	    	 * */ 
+	    	
+	    	for(int i=0;i<rows;i++)
+	    		for(int j=0;j<cols;j++){
+	    			norm[i][j] = (lowNorm + (((ref[i][j] - min)*(highNorm - lowNorm))/(max - min))); 
+	    		}
+	    	img.setNormalisedReflectance(norm);
+	    	
 	    	return img;
 	    	
 	    }
@@ -162,61 +180,59 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	    
 	    /**
 	     * Retinex Algorithm.
-	     * MultiScale Retinex with Colour Restoration(MSRCR).
-	     * Takes in the image's red, green, blue information for each pixel as 3 short[][].
+	     * Singlescale Retinex(SSR).
+	     * Takes ImageHandler that holds all the pictures information.
 	     * Takes in image rows for height and cols for width as ints.
 	     */
-	    public ImageHandler MSRCR(ImageHandler loadedImage){
+	    public ImageHandler SSR(ImageHandler inputImage){
 
-	    	BufferedImage imageTemp;
+	    	ImageHandler image = inputImage;
 	    	int totalRows, totalCols;
-	    	totalRows = loadedImage.getTotalRows();
-	    	totalCols = loadedImage.getTotalCols();
+	    	totalRows = image.getTotalRows();
+	    	totalCols = image.getTotalCols();
 	    	
-	    	
-	    	
-	    	
-	    	
+		    image.RGBtoHSV();
+	    	image = gaussianBlur(image, 3);
 		    
-		    //reflectance(bufferedImageRed, bufferedImageGreen, bufferedImageBlue, imageRows, imageCols);
-		    //imageTemp = gaussianBlur(loadedImage.getImage());//Not ideal.
-		    loadedImage.RGBtoHSV();
-	    	loadedImage = gaussianBlur(loadedImage, 3);
-		    imageTemp = loadedImage.getImage();
+		    image = reflectance(image, 1.5);
 		    
-		    reflectance(loadedImage, 1.5);
+		    image = normalisation(image);
+		    image.HSVtoRGB();
 		    
-		    normalisation(loadedImage);
-	    	/*
-		    unpackImage2(finishedImage);
-		    processedImageRed= new double[totalRows2][totalCols2];
-			processedImageGreen=new double[totalRows2][totalCols2];
-			processedImageBlue=new double[totalRows2][totalCols2];
 		    //Singlescalar retinex.
-		    for(int i=0;i<totalRows2;i++){
-		    	for(int j=0;j<totalCols2;j++){
-		    		processedImageRed[i][j] = 10*(Math.log(bufferedImageRed2[i][j]) - Math.log((bufferedImageRed2[i][j])*bufferedImageRed2[i][j]));
-		    		processedImageGreen[i][j] = 10*(Math.log(bufferedImageGreen2[i][j]) - Math.log((bufferedImageGreen2[i][j])*bufferedImageGreen2[i][j]));
-		    		processedImageBlue[i][j] = 10*(Math.log(bufferedImageBlue2[i][j]) - Math.log((bufferedImageBlue2[i][j])*bufferedImageBlue2[i][j]));
+		    float[][] red, green, blue;
+		    short[][] redI, greenI, blueI;
+		    
+		    red = image.getProRed();
+		    green = image.getProGreen();
+		    blue =  image.getProBlue();
+		    
+		    redI = image.getBufferedImageRed();
+		    greenI = image.getBufferedImageGreen();
+		    blueI = image.getBufferedImageBlue();
+		    
+		    float gain = 1f;
+		    float alpha = 128f;
+		    float offset = 0f;
+		    float log1;
+		    
+		    for(int i=0;i<totalRows;i++){
+		    	for(int j=0;j<totalCols;j++){
+		    		log1 = (float)Math.log((float)redI[i][j] + (float)greenI[i][j] + (float)blueI[i][j] + 3f);
+		    		
+		    		redI[i][j] = (short) ((gain*(Math.log(alpha*(red[i][j]+1.0f)) - log1)* Math.log(redI[i][j])) + offset);
+		    		greenI[i][j] = (short) ((gain*(Math.log(alpha*(green[i][j]+1.0f)) - log1)* Math.log(greenI[i][j])) + offset);
+		    		blueI[i][j] = (short) ((gain*(Math.log(alpha*(blue[i][j]+1.0f)) - log1)* Math.log(blueI[i][j])) + offset);
 		    	}
 		    }
-			processedIntImageRed2= new int[totalRows2][totalCols2];
-			processedIntImageGreen2=new int[totalRows2][totalCols2];
-			processedIntImageBlue2=new int[totalRows2][totalCols2];
-			
-			
-		    for(int i=0;i<totalRows2;i++)
-		    	for(int j=0;j<totalCols2;j++){
-		    		processedIntImageRed2[i][j] = (int)processedImageRed[i][j];
-		    		processedIntImageGreen2[i][j] = (int)processedImageGreen[i][j];
-		    		processedIntImageBlue2[i][j] = (int)processedImageBlue[i][j];
-		    	}
+
+		    image.setBufferedImageRed(redI);
+		    image.setBufferedImageGreen(greenI);
+		    image.setBufferedImageBlue(blueI);
 		    
-		    */
-	    	//finishedImage = packImage2(processedIntImageRed2, processedIntImageGreen2, processedIntImageBlue2);
-		    loadedImage.setImage(imageTemp);
-		    ImageHandler finishedImage = new ImageHandler(loadedImage.packImage());
-		    return finishedImage;
+		    //ImageHandler finishedImage = new ImageHandler(loadedImage.packImage());
+		    image.packImage();
+		    return image;
 	    }
 	
 
@@ -270,7 +286,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        gausValI = new float[rows][cols];
 	        for(int x=0;x<rows;x++)
 	        	for(int y=0;y<cols;y++){
-	        		gausValI[x][y] =valI[x][y];
+	        		gausValI[x][y] = valI[x][y];
 	        	}
 	        
 	        for(int x=0;x<rows;x++)
@@ -286,6 +302,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 	        img.setGausValI(gausValI);
 	        return img;
 		}
+		
 		
 		/**
 	     * http://www.jhlabs.com/ip/GaussianFilter.java
@@ -389,5 +406,5 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 
 			return new Kernel(rows, 1, matrix);
 		}
-
+		
 }

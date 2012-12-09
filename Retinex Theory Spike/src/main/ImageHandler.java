@@ -11,14 +11,18 @@ public class ImageHandler {
 	private short[][] bufferedImageRed;
 	private short[][] bufferedImageGreen;
 	private short[][] bufferedImageBlue;
-	
+
 	private float[][] hueI, satI, valI;
-	private float[] tempHSV;
-	private float r, g, b;
+
+
 	
 	private float[][] gausValI;
 	
 	private float[][] reflectance;
+	
+	private float[][] normalisedReflectance;
+	
+	private float[][] proRed, proGreen, proBlue;
 	
 	public ImageHandler(BufferedImage image){
 		this.image = image;
@@ -89,7 +93,7 @@ public class ImageHandler {
     
     
     
-    public BufferedImage packImage() {
+    public void packImage() {
     	
 		int[] newBufferedImageData = new int[totalRows * totalCols];
     	int index;
@@ -113,7 +117,7 @@ public class ImageHandler {
     	
     	
 
-    	return newImage;
+    	setImage(newImage);
     }
 
 	public int getTotalRows() {
@@ -142,8 +146,11 @@ public class ImageHandler {
 	
 	public void RGBtoHSV(){
     	//Convert RGB to HSV. Only the V is used here to help create a more efficient Guassian Blue.
-    
+		float r, g, b;
+		float[] tempHSV;
+		
     	tempHSV = new float[3];
+    	
     	hueI = new float[totalRows][totalCols];
     	satI = new float[totalRows][totalCols];
     	valI = new float[totalRows][totalCols];
@@ -197,6 +204,94 @@ public class ImageHandler {
 		}else{h = 0f;}
 		return new float[] {h,s,v};
 	}
+	
+	public void HSVtoRGB(){
+		float h, s, v;
+		short[] tempRGB;
+		
+		tempRGB = new short[3];
+		proRed = new float[totalRows][totalCols];
+		proGreen = new float[totalRows][totalCols];
+		proBlue = new float[totalRows][totalCols];
+		
+		for(int i=0;i<totalRows;i++)
+    		for(int j=0;j<totalCols;j++){
+    			
+    			h = hueI[i][j];
+    			s = satI[i][j];
+    			v = gausValI[i][j];
+    			
+    			tempRGB = HSVtoRGB(h,s,v);
+    			
+    			proRed[i][j] = tempRGB[0];
+    			proGreen[i][j] = tempRGB[1];
+    			proBlue[i][j] = tempRGB[2];
+    			
+    		}
+		
+	}
+	
+	private short[] HSVtoRGB(float h, float s, float v)
+	{
+		int i;
+		float f, p, q, t;
+	        float r, g, b;
+
+	        v *= 255f;
+
+		if( s == 0 ) {
+			// achromatic (grey)
+			r = g = b = v;
+			return new short[] {(short)r, (short)g, (short)b};
+		}
+
+		h /= 60f;
+		i=0;			// sector 0 to 5
+		for(int j=0; j<6; j++)
+	        if(h>=j && h<j+1)
+		i=j;
+
+		f = h - i;			// factorial part of h
+		p = v * ( 1 - s );
+		q = v * ( 1 - s * f );
+		t = v * ( 1 - s * ( 1 - f ) );
+
+		switch( i ) {
+			case 0:
+				r = v;
+				g = t;
+				b = p;
+				break;
+			case 1:
+				r = q;
+				g = v;
+				b = p;
+				break;
+			case 2:
+				r = p;
+				g = v;
+				b = t;
+				break;
+			case 3:
+				r = p;
+				g = q;
+				b = v;
+				break;
+			case 4:
+				r = t;
+				g = p;
+				b = v;
+				break;
+			default:		// case 5:
+				r = v;
+				g = p;
+				b = q;
+				break;
+		}
+
+	       return new short[] {(short)r, (short)g, (short)b};
+
+	}
 
 	public float[][] getHueI() {
 		return hueI;
@@ -225,7 +320,39 @@ public class ImageHandler {
 	public void setReflectance(float[][] reflectance) {
 		this.reflectance = reflectance;
 	}
-	
+
+	public float[][] getNormalisedReflectance() {
+		return normalisedReflectance;
+	}
+
+	public void setNormalisedReflectance(float[][] normalisedReflectance) {
+		this.normalisedReflectance = normalisedReflectance;
+	}
+
+	public float[][] getProRed() {
+		return proRed;
+	}
+
+	public float[][] getProGreen() {
+		return proGreen;
+	}
+
+	public float[][] getProBlue() {
+		return proBlue;
+	}
+
+	public void setBufferedImageRed(short[][] bufferedImageRed) {
+		this.bufferedImageRed = bufferedImageRed;
+	}
+
+	public void setBufferedImageGreen(short[][] bufferedImageGreen) {
+		this.bufferedImageGreen = bufferedImageGreen;
+	}
+
+	public void setBufferedImageBlue(short[][] bufferedImageBlue) {
+		this.bufferedImageBlue = bufferedImageBlue;
+	}
+
 	
 
 	
