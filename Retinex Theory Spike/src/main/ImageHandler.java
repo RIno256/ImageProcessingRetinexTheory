@@ -219,7 +219,7 @@ public class ImageHandler {
     			
     			h = hueI[i][j];
     			s = satI[i][j];
-    			v = gausValI[i][j];
+    			v = normalisedReflectance[i][j];
     			
     			tempRGB = HSVtoRGB(h,s,v);
     			
