@@ -199,7 +199,7 @@ public class ImageCanvasSQI extends JPanel implements ActionListener {
 		    
 		    image = normalisation(image);
 		    image.HSVtoRGB();
-		    
+		    //cpdeeee
 		    //Singlescalar retinex.
 		    float[][] red, green, blue;
 		    short[][] redI, greenI, blueI;
